@@ -2,7 +2,7 @@
 include '../required/config.php';
 header('Content-Type: application/json');
 
-$API_KEY = "8853662979Ma@";
+$API_KEY = getenv('LINK_PUSH_API_KEY') ?: "";
 
 // Validate method
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
