@@ -15,7 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kpi               = $_POST['kpi'] ?? '';
     $terms_conditions  = $_POST['terms_conditions'] ?? '';
     $require_tnc       = isset($_POST['require_tnc']) ? 1 : 0;
-    $redirect_type     = in_array($_POST['redirect_type'] ?? '', ['302', '302_hrf', '200', '200_hrf'], true) ? $_POST['redirect_type'] : '302';
+    $redirect_type     = in_array($_POST['redirect_type'] ?? '', ['302', '302_hrf', '200', '200_hrf', 'custom'], true) ? $_POST['redirect_type'] : '302';
+    $custom_url        = $_POST['custom_url'] ?? '';
     $os                = in_array($_POST['os'] ?? '', ['all', 'windows', 'macos', 'linux', 'android', 'ios'], true) ? $_POST['os'] : 'all';
     $allowedDevices    = ['desktop', 'mobile', 'tablet'];
     $selectedDevices   = array_values(array_intersect($_POST['devices'] ?? [], $allowedDevices));
@@ -25,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $sql = "UPDATE campaigns
             SET campaign_name = ?, description = ?, category = ?, main_url = ?, safe_url = ?, google_pixel = ?, facebook_pixel = ?,
-                blocked_params = ?, note = ?, kpi = ?, terms_conditions = ?, require_tnc = ?, devices = ?, os = ?, redirect_type = ?, status = ?
+                blocked_params = ?, note = ?, kpi = ?, terms_conditions = ?, require_tnc = ?, devices = ?, os = ?, redirect_type = ?, custom_url = ?, status = ?
             WHERE id = ?";
 
     $isAdmin = ($_SESSION['role'] ?? '') === 'admin';
@@ -41,10 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $params = [
         $campaign_name, $description, $category, $main_url, $safe_url, $google_pixel, $facebook_pixel,
-        $blocked_params, $note, $kpi, $terms_conditions, $require_tnc, $devices, $os, $redirect_type, $status,
+        $blocked_params, $note, $kpi, $terms_conditions, $require_tnc, $devices, $os, $redirect_type, $custom_url, $status,
         $campaign_id,
     ];
-    $types = 'ssssssssssisssssi'; // 15 s/i for the SET columns (require_tnc is i) + i for WHERE id
+    $types = 'sssssssssssisssssi'; // 17 SET columns (require_tnc is 'i') + WHERE id
 
     if (!$isAdmin) {
         $params[] = $_SESSION['user_id'];

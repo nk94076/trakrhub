@@ -139,13 +139,23 @@ include '../required/config.php';
                                 <div class="mb-3 row">
                                   <label class="col-sm-3">Redirect Type</label>
                                   <div class="col-sm-9">
-                                    <select class="form-control" name="redirect_type">
+                                    <select class="form-control" name="redirect_type" id="redirectTypeSelect" onchange="document.getElementById('customUrlRow').style.display = this.value === 'custom' ? '' : 'none';">
                                       <option value="302" selected>302</option>
                                       <option value="302_hrf">302 with Hide Referrer</option>
                                       <option value="200">200 OK</option>
                                       <option value="200_hrf">200 with Hide Referrer</option>
+                                      <option value="custom">Custom (Pre-lander / Blog Post)</option>
                                     </select>
                                     <div class="form-text">We recommend using 302 as the redirect type.</div>
+                                  </div>
+                                </div>
+
+                                <!-- Custom Redirect URL -->
+                                <div class="mb-3 row" id="customUrlRow" style="display: none;">
+                                  <label class="col-sm-3">Custom URL</label>
+                                  <div class="col-sm-9">
+                                    <input class="form-control" type="url" name="custom_url" placeholder="https://yourblog.com/offer-review-post">
+                                    <div class="form-text">Traffic will land on this page first (e.g. a blog post/pre-lander about the offer) instead of going straight to the Main URL — its referral is used from there.</div>
                                   </div>
                                 </div>
 

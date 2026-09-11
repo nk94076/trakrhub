@@ -2,6 +2,11 @@
 -- Run this ONCE on the live database (via phpMyAdmin in Hostinger hPanel,
 -- or `mysql` CLI) BEFORE pulling the matching code update.
 -- Safe to run on a live table: only adds columns / migrates the status column.
+--
+-- If you already ran an earlier version of this file (before the
+-- "custom_url" column existed) and everything else is already in place,
+-- just run this one line instead of the whole script:
+--   ALTER TABLE campaigns ADD COLUMN custom_url TEXT NULL AFTER redirect_type;
 
 ALTER TABLE campaigns
   ADD COLUMN description TEXT NULL AFTER campaign_name,
@@ -12,6 +17,7 @@ ALTER TABLE campaigns
   ADD COLUMN devices VARCHAR(100) NOT NULL DEFAULT 'all' AFTER require_tnc,
   ADD COLUMN os VARCHAR(100) NOT NULL DEFAULT 'all' AFTER devices,
   ADD COLUMN redirect_type VARCHAR(20) NOT NULL DEFAULT '302' AFTER os,
+  ADD COLUMN custom_url TEXT NULL AFTER redirect_type,
   ADD COLUMN campaign_status ENUM('active','pending','paused') NOT NULL DEFAULT 'pending' AFTER status;
 
 -- Convert the old status (1 = active, 0 = inactive) into the new 3-state column

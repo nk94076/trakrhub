@@ -38,8 +38,11 @@ $filteredParams = array_filter($_GET, function ($key) use ($blockedParams) {
     return !in_array($key, ['offer_id', 'aff_id']) && !in_array($key, $blockedParams);
 }, ARRAY_FILTER_USE_KEY);
 
-// Build redirect URL
-$finalUrl = $campaign['main_url'];
+// Build redirect URL — a "custom" redirect type sends traffic to a
+// pre-lander/blog post about the offer instead of straight to the main URL.
+$finalUrl = ($campaign['redirect_type'] ?? '302') === 'custom' && !empty($campaign['custom_url'])
+    ? $campaign['custom_url']
+    : $campaign['main_url'];
 if (!empty($filteredParams)) {
     $queryString = http_build_query($filteredParams);
     $finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . $queryString;

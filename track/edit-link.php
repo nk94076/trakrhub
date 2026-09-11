@@ -149,11 +149,19 @@ $selectedDevices = $campaign['devices'] === 'all' ? ['desktop', 'mobile', 'table
         <div class="mb-3 row">
           <label class="col-sm-3">Redirect Type</label>
           <div class="col-sm-9">
-            <select class="form-control" name="redirect_type">
-              <?php foreach (['302' => '302', '302_hrf' => '302 with Hide Referrer', '200' => '200 OK', '200_hrf' => '200 with Hide Referrer'] as $val => $label): ?>
+            <select class="form-control" name="redirect_type" id="redirectTypeSelect" onchange="document.getElementById('customUrlRow').style.display = this.value === 'custom' ? '' : 'none';">
+              <?php foreach (['302' => '302', '302_hrf' => '302 with Hide Referrer', '200' => '200 OK', '200_hrf' => '200 with Hide Referrer', 'custom' => 'Custom (Pre-lander / Blog Post)'] as $val => $label): ?>
                 <option value="<?= $val ?>" <?= ($campaign['redirect_type'] ?? '302') === $val ? 'selected' : '' ?>><?= $label ?></option>
               <?php endforeach; ?>
             </select>
+          </div>
+        </div>
+
+        <div class="mb-3 row" id="customUrlRow" style="display: <?= ($campaign['redirect_type'] ?? '302') === 'custom' ? '' : 'none' ?>;">
+          <label class="col-sm-3">Custom URL</label>
+          <div class="col-sm-9">
+            <input class="form-control" type="url" name="custom_url" value="<?= htmlspecialchars($campaign['custom_url'] ?? '') ?>" placeholder="https://yourblog.com/offer-review-post">
+            <div class="form-text">Traffic will land on this page first (e.g. a blog post/pre-lander about the offer) instead of going straight to the Main URL — its referral is used from there.</div>
           </div>
         </div>
 
