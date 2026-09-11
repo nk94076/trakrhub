@@ -7,31 +7,43 @@ ob_start();  // Output buffering start
 require_once '../required/auth.php';
 include '../required/config.php';
 
-// Get date filter values from URL or set defaults
-$start_date = $_GET['start_date'] ?? date('Y-m-d', strtotime('-7 days'));
+// Get filter values from URL or set defaults
+$start_date = $_GET['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
 $end_date   = $_GET['end_date'] ?? date('Y-m-d');
+$search     = trim($_GET['search'] ?? '');
 
-// Prepare SQL with date filter
 $isAdmin = ($_SESSION['role'] ?? '') === 'admin';
+
+$conditions = ["DATE(c.created_at) BETWEEN ? AND ?"];
+$params = [$start_date, $end_date];
+$types = 'ss';
+
+if (!$isAdmin) {
+    $conditions[] = 'c.user_id = ?';
+    $params[] = $_SESSION['user_id'];
+    $types .= 'i';
+}
+if ($search !== '') {
+    $conditions[] = '(c.campaign_name LIKE ? OR c.category LIKE ?)';
+    $like = "%$search%";
+    $params[] = $like;
+    $params[] = $like;
+    $types .= 'ss';
+}
+
 $sql = "SELECT
-            c.id,
-            c.campaign_name,
-            c.category,
-            c.main_url,
-            c.safe_url,
-            c.status,
-            c.user_id,
-            c.created_at
+            c.id, c.campaign_name, c.category, c.status, c.devices, c.os, c.redirect_type,
+            c.main_url, c.safe_url, c.user_id, c.created_at,
+            SUM(cl.is_real = 1) AS real_clicks,
+            SUM(cl.is_real = 0) AS blank_clicks
         FROM campaigns c
-        WHERE DATE(c.created_at) BETWEEN ? AND ?" . (!$isAdmin ? " AND c.user_id = ?" : "") . "
+        LEFT JOIN click_logs cl ON cl.campaign_id = c.id
+        WHERE " . implode(' AND ', $conditions) . "
+        GROUP BY c.id
         ORDER BY c.id DESC";
 
 $campaignsStmt = $conn->prepare($sql);
-if ($isAdmin) {
-    $campaignsStmt->bind_param("ss", $start_date, $end_date);
-} else {
-    $campaignsStmt->bind_param("ssi", $start_date, $end_date, $_SESSION['user_id']);
-}
+$campaignsStmt->bind_param($types, ...$params);
 $campaignsStmt->execute();
 // Fetched into a plain array (not a mysqli_result) so it survives the header/side-bar
 // includes below, which reuse $stmt/$result for their own queries in this same scope.
@@ -50,26 +62,6 @@ $campaigns = $campaignsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
         svg {
             vertical-align: middle;
         }
-       
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.switch-state {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    transition: .4s;
-    border-radius: 24px;
-    background-color: #dc3545; /* Red by default */
-}
-.switch input:checked + .switch-state {
-    background-color: #28a745; /* Green when checked */
-}
     </style>
 </head>
 <body>
@@ -88,133 +80,122 @@ $campaigns = $campaignsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
                     </div>
                 </div>
 
-                <!-- ðŸ”¹ **Date Filter Form** -->
-                <div class="col-sm-12">
-                    <div class="card">
-                        <div class="card-header pb-0 card-no-border">
-                            <h5>Filter</h5>
-                            
+                <div class="container-fluid dashboard-10">
+
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h3 class="mb-1">Manage Campaigns</h3>
+                            <p class="text-muted mb-0">View, search and manage all your tracking campaigns.</p>
                         </div>
-                     <div class="card-body">
+                        <a href="create-link.php" class="btn btn-primary"><i class="fa-solid fa-plus me-1"></i>Create Campaign</a>
+                    </div>
+
+                    <!-- Filter card -->
+                    <div class="card">
+                        <div class="card-body">
                             <form method="GET" action="">
-                                <div class="row">
+                                <div class="row g-3">
                                     <div class="col-md-3">
-                                        <label>Start Date:</label>
-                                        <input type="date" name="start_date" value="<?php echo $start_date; ?>">
+                                        <label class="form-label">Start Date</label>
+                                        <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($start_date) ?>">
                                     </div>
                                     <div class="col-md-3">
-                                        <label>End Date:</label>
-                                       <input type="date" name="end_date" value="<?php echo $end_date; ?>">
+                                        <label class="form-label">End Date</label>
+                                        <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($end_date) ?>">
                                     </div>
-                                    <div class="col-md-3 d-flex align-items-end">
-                                        <button type="submit" class="btn btn-primary">Filter</button>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Search</label>
+                                        <input type="text" name="search" class="form-control" placeholder="Search campaign name or category..." value="<?= htmlspecialchars($search) ?>">
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end gap-2">
+                                        <button type="submit" class="btn btn-primary flex-fill">Search</button>
+                                        <a href="manage-link.php" class="btn btn-outline-secondary" title="Reset Filters"><i class="fa-solid fa-rotate-left"></i></a>
                                     </div>
                                 </div>
                             </form>
                         </div>
-
                     </div>
-                </div>
 
-                <!-- ðŸ”¹ **Report Table** -->
-                <div class="col-sm-12">
+                    <!-- Campaigns table -->
                     <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fa-solid fa-gear me-1"></i>Bulk Action
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item bulk-action" href="javascript:void(0)" data-action="active">Set Active</a></li>
+                                    <li><a class="dropdown-item bulk-action" href="javascript:void(0)" data-action="paused">Set Paused</a></li>
+                                    <li><a class="dropdown-item bulk-action" href="javascript:void(0)" data-action="pending">Set Pending</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item bulk-action text-danger" href="javascript:void(0)" data-action="delete">Delete</a></li>
+                                </ul>
+                            </div>
+                            <span class="text-muted small"><?= count($campaigns) ?> campaign<?= count($campaigns) === 1 ? '' : 's' ?></span>
+                        </div>
                         <div class="card-body">
                             <div class="table-responsive custom-scrollbar">
-
-
-                              <div class="card-body">
-    <h5>Manage Links</h5>
-</div>
-
-<table class="display table-striped border" id="basic-1">
-    <thead>
-        <tr>
-            <th>S.No</th>
-            <th>Campaign Name</th>
-            <th>Category</th>
-            <th>Main URL</th>
-            <th>Safe URL</th>
-            <th>View URL</th>
-            <th>Status</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php
-        $sno = 1;
-        $statusBadge = ['active' => 'success', 'pending' => 'warning', 'paused' => 'secondary'];
-        foreach ($campaigns as $row) {
-            $campaignId = $row['id'];
-            $userId = $row['user_id'];
-            $viewUrl = "https://app.trakrhub.com/click.php?aff_id={$userId}&offer_id={$campaignId}";
-            $statusVal = $row['status'];
-            $badgeClass = $statusBadge[$statusVal] ?? 'secondary';
-            echo "<tr>
-                    <td>{$sno}</td>
-                    <td>" . htmlspecialchars($row['campaign_name']) . "</td>
-                    <td>" . htmlspecialchars($row['category'] ?? '') . "</td>
-                    <td>" . htmlspecialchars($row['main_url']) . "</td>
-                    <td>" . htmlspecialchars($row['safe_url']) . "</td>
-                    <td><button class='btn btn-success' type='button' data-bs-toggle='modal' data-bs-target='#modalUrl{$campaignId}'>View URL</button></td>
-                    <td>
-                        <select class='form-select status-select' data-id='{$campaignId}'>
-                            <option value='active' " . ($statusVal === 'active' ? 'selected' : '') . ">Active</option>
-                            <option value='pending' " . ($statusVal === 'pending' ? 'selected' : '') . ">Pending</option>
-                            <option value='paused' " . ($statusVal === 'paused' ? 'selected' : '') . ">Paused</option>
-                        </select>
-                    </td>
-                    <td>
-                        <ul class='action'>
-                            <li class='edit'>
-                                <a href='duplicate-link.php?id={$campaignId}'><i class='icon-layers'></i></a>
-                            </li>
-                            <li class='edit-campaign'>
-                                <a href='edit-link.php?id={$campaignId}'><i class='icon-pencil-alt'></i></a>
-                            </li>
-                            <li class='delete'>
-                                <a href='javascript:void(0);' class='delete-offer' data-id='{$campaignId}'><i class='fa-solid fa-trash-can'></i></a>
-                            </li>
-                        </ul>
-                    </td>
-                </tr>";
-
-            echo "<div class='modal fade' id='modalUrl{$campaignId}' tabindex='-1' aria-labelledby='modalUrlLabel{$campaignId}' aria-hidden='true'>
-                    <div class='modal-dialog'>
-                        <div class='modal-content p-3'>
-                            <div class='modal-header'>
-                                <h5 class='modal-title' id='modalUrlLabel{$campaignId}'>Tracking Link</h5>
-                                <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
-                            </div>
-                            <div class='modal-body'>
-                                <input type='text' class='form-control' value='{$viewUrl}' readonly onclick='this.select();'>
+                                <table class="display table-striped border" id="basic-1">
+                                    <thead>
+                                        <tr>
+                                            <th><input type="checkbox" id="selectAll"></th>
+                                            <th>ID</th>
+                                            <th>Campaign Name</th>
+                                            <th>Status</th>
+                                            <th>Category</th>
+                                            <th>Devices</th>
+                                            <th>OS</th>
+                                            <th>Redirect Type</th>
+                                            <th>Real Clicks</th>
+                                            <th>Blank Clicks</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php
+                                    $statusBadge = ['active' => 'success', 'pending' => 'warning', 'paused' => 'secondary'];
+                                    foreach ($campaigns as $row) {
+                                        $campaignId = (int) $row['id'];
+                                        $statusVal = $row['status'];
+                                        $badgeClass = $statusBadge[$statusVal] ?? 'secondary';
+                                        echo "<tr>
+                                                <td><input type='checkbox' class='row-check' value='{$campaignId}'></td>
+                                                <td>{$campaignId}</td>
+                                                <td><a href='view-link.php?id={$campaignId}'>" . htmlspecialchars($row['campaign_name']) . "</a></td>
+                                                <td><span class='badge bg-{$badgeClass}'>" . htmlspecialchars(ucfirst($statusVal)) . "</span></td>
+                                                <td>" . htmlspecialchars($row['category'] ?? '') . "</td>
+                                                <td>" . htmlspecialchars($row['devices'] ?? 'all') . "</td>
+                                                <td>" . htmlspecialchars($row['os'] ?? 'all') . "</td>
+                                                <td>" . htmlspecialchars($row['redirect_type'] ?? '302') . "</td>
+                                                <td>" . (int) ($row['real_clicks'] ?? 0) . "</td>
+                                                <td>" . (int) ($row['blank_clicks'] ?? 0) . "</td>
+                                                <td>
+                                                    <ul class='action'>
+                                                        <li class='edit'><a href='view-link.php?id={$campaignId}' title='View'><i class='fa-solid fa-eye'></i></a></li>
+                                                        <li class='edit-campaign'><a href='edit-link.php?id={$campaignId}' title='Edit'><i class='icon-pencil-alt'></i></a></li>
+                                                        <li class='delete'><a href='javascript:void(0);' class='delete-offer' data-id='{$campaignId}' title='Delete'><i class='fa-solid fa-trash-can'></i></a></li>
+                                                    </ul>
+                                                </td>
+                                            </tr>";
+                                    }
+                                    if (empty($campaigns)) {
+                                        echo "<tr><td colspan='11' class='text-center text-muted py-4'>No campaigns found for the selected filters.</td></tr>";
+                                    }
+                                    ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
-                </div>";
-            $sno++;
-        }
-        ?>
-    </tbody>
-</table>
 
-<?php ob_end_flush(); ?>
-
-                                
-                                
-
-
-                            </div>
-                        </div>
-                    </div>
                 </div>
-              
+
             </div>
             <footer class="footer">
                 <div class="container-fluid">
                     <div class="row">
                         <div class="col-md-12 footer-copyright text-center">
-                            <p class="mb-0">Copyright <span class="year-update"></span> Â© Adtrackr</p>
+                            <p class="mb-0">Copyright <span class="year-update"></span> © Adtrackr</p>
                         </div>
                     </div>
                 </div>
@@ -223,41 +204,47 @@ $campaigns = $campaignsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
     </div>
     <?php include '../required/footerjs.php'; ?>
     <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const deleteButtons = document.querySelectorAll(".delete-offer");
+document.getElementById('selectAll').addEventListener('change', function () {
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
+});
 
-    deleteButtons.forEach(button => {
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".delete-offer").forEach(function (button) {
         button.addEventListener("click", function () {
             const id = this.getAttribute("data-id");
-            
             if (confirm("Do you want to delete this campaign?")) {
-                // Redirect to deletion script
                 window.location.href = `delete-link.php?id=${id}`;
             }
         });
     });
-});
-</script>
-<script>
-document.querySelectorAll('.status-select').forEach(function(select) {
-    select.addEventListener('change', function() {
-        const campaignId = this.dataset.id;
-        const newStatus = this.value;
 
-        fetch('update-status.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: `id=${campaignId}&status=${encodeURIComponent(newStatus)}`
-        })
-        .then(res => res.text())
-        .then(msg => {
-            console.log(msg); // Optional: you can show a toast here
+    document.querySelectorAll(".bulk-action").forEach(function (link) {
+        link.addEventListener("click", async function () {
+            const ids = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
+            if (ids.length === 0) {
+                alert("Select at least one campaign first.");
+                return;
+            }
+            const action = this.dataset.action;
+            if (action === 'delete') {
+                if (!confirm(`Delete ${ids.length} selected campaign(s)? This cannot be undone.`)) return;
+                for (const id of ids) {
+                    await fetch(`delete-link.php?id=${id}`);
+                }
+            } else {
+                if (!confirm(`Set ${ids.length} selected campaign(s) to "${action}"?`)) return;
+                for (const id of ids) {
+                    await fetch('update-status.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `id=${id}&status=${encodeURIComponent(action)}`
+                    });
+                }
+            }
+            window.location.reload();
         });
     });
 });
-</script>
-
+    </script>
 </body>
 </html>
