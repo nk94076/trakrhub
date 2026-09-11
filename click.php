@@ -40,10 +40,11 @@ $filteredParams = array_filter($_GET, function ($key) use ($blockedParams) {
 
 // Build redirect URL — a "custom" redirect type sends traffic to a
 // pre-lander/blog post about the offer instead of straight to the main URL.
-$finalUrl = ($campaign['redirect_type'] ?? '302') === 'custom' && !empty($campaign['custom_url'])
-    ? $campaign['custom_url']
-    : $campaign['main_url'];
-if (!empty($filteredParams)) {
+// It is used exactly as entered: no tracking params get appended, so it
+// stays a clean link to the custom page.
+$isCustomRedirect = ($campaign['redirect_type'] ?? '302') === 'custom' && !empty($campaign['custom_url']);
+$finalUrl = $isCustomRedirect ? $campaign['custom_url'] : $campaign['main_url'];
+if (!$isCustomRedirect && !empty($filteredParams)) {
     $queryString = http_build_query($filteredParams);
     $finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . $queryString;
 }
@@ -51,7 +52,10 @@ if (!empty($filteredParams)) {
 // Capture environment data
 $ip         = $_SERVER['REMOTE_ADDR'] ?? '';
 $userAgent  = $_SERVER['HTTP_USER_AGENT'] ?? '';
-$referrer   = $_SERVER['HTTP_REFERER'] ?? '';
+// For a "custom" redirect, the report's Referrer column should show the
+// custom pre-lander URL the click was attributed to, not the raw browser
+// Referer header (which is usually empty on a fresh ad click anyway).
+$referrer   = $isCustomRedirect ? $campaign['custom_url'] : ($_SERVER['HTTP_REFERER'] ?? '');
 $language   = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '';
 $timestamp  = date('Y-m-d H:i:s');
 
@@ -159,7 +163,10 @@ if ($allowedOs !== 'all' && ($osTargetMap[$os] ?? null) !== $allowedOs) {
 }
 
 // ← CHANGE 2: landing page tracking ke liye adtrackr_lid append karo
-$finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . 'adtrackr_lid=' . $insertedId;
+// (skipped for a "custom" redirect — that URL is used exactly as entered)
+if (!$isCustomRedirect) {
+    $finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . 'adtrackr_lid=' . $insertedId;
+}
 
 $has_pixel = !empty($campaign['facebook_pixel']) || !empty($campaign['google_pixel']);
 
