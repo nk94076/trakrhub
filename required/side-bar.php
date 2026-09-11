@@ -72,7 +72,6 @@ function can_access($section, $features, $role) {
             <ul class="sidebar-submenu">
               <li><a href="<?= $base_url ?>track/create-link.php">Create Tracking Link</a></li>
               <li><a href="<?= $base_url ?>track/manage-link.php">Manage Link</a></li>
-              <li><a href="<?= $base_url ?>track/track-data.php">Track Data</a></li>
             </ul>
           </li>
           <?php endif; ?>
@@ -142,6 +141,7 @@ function can_access($section, $features, $role) {
               <svg class="stroke-icon"><use href="../assets/svg/icon-sprite.svg#stroke-reports"></use></svg>
               <svg class="fill-icon"><use href="../assets/svg/icon-sprite.svg#fill-reports"></use></svg><span>Manage Reports</span></a>
             <ul class="sidebar-submenu">
+              <li><a href="<?= $base_url ?>track/track-data.php">Track Data</a></li>
               <li><a href="<?= $base_url ?>admin/campaigns-reports.php">Offers Reports</a></li>
               <li><a href="<?= $base_url ?>admin/ip-report.php">Check IP report</a></li>
               <li><a href="<?= $base_url ?>admin/ip-report.php">Check Gclid</a></li>
