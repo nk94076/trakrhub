@@ -13,9 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status          = isset($_POST['status']) ? 1 : 0;
     $blocked_params  = isset($_POST['blocked_params']) ? json_encode($_POST['blocked_params']) : '[]';
 
-    $sql = "UPDATE campaigns 
+    $sql = "UPDATE campaigns
             SET campaign_name = ?, main_url = ?, safe_url = ?, google_pixel = ?, facebook_pixel = ?, blocked_params = ?, note = ?, status = ?
             WHERE id = ?";
+
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        $sql .= " AND user_id = ?";
+    }
 
     $stmt = $conn->prepare($sql);
 
@@ -23,17 +27,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("❌ Prepare failed: " . $conn->error);
     }
 
-    $stmt->bind_param("sssssssii", 
-        $campaign_name, 
-        $main_url, 
-        $safe_url, 
-        $google_pixel, 
-        $facebook_pixel, 
-        $blocked_params, 
-        $note, 
-        $status, 
-        $campaign_id
-    );
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        $stmt->bind_param("sssssssiii",
+            $campaign_name,
+            $main_url,
+            $safe_url,
+            $google_pixel,
+            $facebook_pixel,
+            $blocked_params,
+            $note,
+            $status,
+            $campaign_id,
+            $_SESSION['user_id']
+        );
+    } else {
+        $stmt->bind_param("sssssssii",
+            $campaign_name,
+            $main_url,
+            $safe_url,
+            $google_pixel,
+            $facebook_pixel,
+            $blocked_params,
+            $note,
+            $status,
+            $campaign_id
+        );
+    }
 
     if ($stmt->execute()) {
         echo "<script>alert('✅ Campaign updated successfully!'); window.location.href='manage-link.php';</script>";

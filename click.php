@@ -146,6 +146,10 @@ $finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . 'adtrackr_lid='
 $has_pixel = !empty($campaign['facebook_pixel']) || !empty($campaign['google_pixel']);
 
 if ($has_pixel) {
+    $fbPixelJs = json_encode((string) $campaign['facebook_pixel']);
+    $gaPixelJs = json_encode((string) $campaign['google_pixel']);
+    $finalUrlJs = json_encode($finalUrl);
+
     echo "<script>\n";
     if (!empty($campaign['facebook_pixel'])) {
         echo <<<FB
@@ -156,7 +160,7 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '{$campaign['facebook_pixel']}');
+fbq('init', {$fbPixelJs});
 fbq('track', 'PageView');
 FB;
     }
@@ -165,10 +169,10 @@ FB;
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', '{$campaign['google_pixel']}');
+gtag('config', {$gaPixelJs});
 GT;
     }
-    echo "setTimeout(function(){ window.location.href = '$finalUrl'; }, 1000);";
+    echo "setTimeout(function(){ window.location.href = {$finalUrlJs}; }, 1000);";
     echo "</script>";
     exit;
 } else {

@@ -1,11 +1,6 @@
 <?php
-// Get the current domain dynamically
-$currentDomain = $_SERVER['HTTP_HOST'];
-
-// Define the target URL dynamically
-$redirectUrl = "https://" . $currentDomain . "/a/login.php";
-
-// Redirect the user
-header("Location: $redirectUrl");
+// Redirect to the login page. The domain is fixed (not taken from the
+// client-supplied Host header) to prevent it being used as an open redirect.
+header("Location: https://app.trakrhub.com/a/login.php");
 exit();
 ?>

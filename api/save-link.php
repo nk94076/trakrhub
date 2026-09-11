@@ -38,17 +38,27 @@ $user_id = (int)$data['user_id'];
 $affiliate_link = trim($data['affiliate_link']);
 
 // Save in DB
-$check = mysqli_query($conn, "SELECT id FROM domain_links WHERE domain_id = $domain_id");
-if (mysqli_num_rows($check) > 0) {
-    mysqli_query($conn, "UPDATE domain_links SET affiliate_link = '$affiliate_link', user_id = $user_id, updated_at = NOW() WHERE domain_id = $domain_id");
+$check = $conn->prepare("SELECT id FROM domain_links WHERE domain_id = ?");
+$check->bind_param("i", $domain_id);
+$check->execute();
+$checkResult = $check->get_result();
+
+if ($checkResult->num_rows > 0) {
+    $upd = $conn->prepare("UPDATE domain_links SET affiliate_link = ?, user_id = ?, updated_at = NOW() WHERE domain_id = ?");
+    $upd->bind_param("sii", $affiliate_link, $user_id, $domain_id);
+    $upd->execute();
 } else {
-    mysqli_query($conn, "INSERT INTO domain_links (user_id, domain_id, affiliate_link, updated_at) VALUES ($user_id, $domain_id, '$affiliate_link', NOW())");
+    $ins = $conn->prepare("INSERT INTO domain_links (user_id, domain_id, affiliate_link, updated_at) VALUES (?, ?, ?, NOW())");
+    $ins->bind_param("iis", $user_id, $domain_id, $affiliate_link);
+    $ins->execute();
 }
 
 // Fetch domain from DB
-$domainRes = mysqli_query($conn, "SELECT name FROM domains WHERE id = $domain_id");
-$domainRow = mysqli_fetch_assoc($domainRes);
-$domainName = trim($domainRow['name']);
+$domainStmt = $conn->prepare("SELECT name FROM domains WHERE id = ?");
+$domainStmt->bind_param("i", $domain_id);
+$domainStmt->execute();
+$domainRow = $domainStmt->get_result()->fetch_assoc();
+$domainName = trim($domainRow['name'] ?? '');
 
 if ($domainName) {
     $remoteUrl = "https://$domainName/update-link.php";
