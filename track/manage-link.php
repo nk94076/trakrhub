@@ -12,23 +12,30 @@ $start_date = $_GET['start_date'] ?? date('Y-m-d', strtotime('-7 days'));
 $end_date   = $_GET['end_date'] ?? date('Y-m-d');
 
 // Prepare SQL with date filter
-$sql = "SELECT 
+$isAdmin = ($_SESSION['role'] ?? '') === 'admin';
+$sql = "SELECT
             c.id,
             c.campaign_name,
+            c.category,
             c.main_url,
             c.safe_url,
             c.status,
             c.user_id,
             c.created_at
         FROM campaigns c
-        WHERE DATE(c.created_at) BETWEEN ? AND ?
+        WHERE DATE(c.created_at) BETWEEN ? AND ?" . (!$isAdmin ? " AND c.user_id = ?" : "") . "
         ORDER BY c.id DESC";
 
-
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("ss", $start_date, $end_date);
-$stmt->execute();
-$result = $stmt->get_result();
+$campaignsStmt = $conn->prepare($sql);
+if ($isAdmin) {
+    $campaignsStmt->bind_param("ss", $start_date, $end_date);
+} else {
+    $campaignsStmt->bind_param("ssi", $start_date, $end_date, $_SESSION['user_id']);
+}
+$campaignsStmt->execute();
+// Fetched into a plain array (not a mysqli_result) so it survives the header/side-bar
+// includes below, which reuse $stmt/$result for their own queries in this same scope.
+$campaigns = $campaignsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -125,6 +132,7 @@ $result = $stmt->get_result();
         <tr>
             <th>S.No</th>
             <th>Campaign Name</th>
+            <th>Category</th>
             <th>Main URL</th>
             <th>Safe URL</th>
             <th>View URL</th>
@@ -135,21 +143,26 @@ $result = $stmt->get_result();
     <tbody>
         <?php
         $sno = 1;
-        while ($row = $result->fetch_assoc()) {
+        $statusBadge = ['active' => 'success', 'pending' => 'warning', 'paused' => 'secondary'];
+        foreach ($campaigns as $row) {
             $campaignId = $row['id'];
             $userId = $row['user_id'];
             $viewUrl = "https://app.trakrhub.com/click.php?aff_id={$userId}&offer_id={$campaignId}";
+            $statusVal = $row['status'];
+            $badgeClass = $statusBadge[$statusVal] ?? 'secondary';
             echo "<tr>
                     <td>{$sno}</td>
-                    <td>{$row['campaign_name']}</td>
-                    <td>{$row['main_url']}</td>
-                    <td>{$row['safe_url']}</td>
+                    <td>" . htmlspecialchars($row['campaign_name']) . "</td>
+                    <td>" . htmlspecialchars($row['category'] ?? '') . "</td>
+                    <td>" . htmlspecialchars($row['main_url']) . "</td>
+                    <td>" . htmlspecialchars($row['safe_url']) . "</td>
                     <td><button class='btn btn-success' type='button' data-bs-toggle='modal' data-bs-target='#modalUrl{$campaignId}'>View URL</button></td>
                     <td>
-                       <label class='switch'>
-                            <input type='checkbox' class='status-toggle' data-id='{$campaignId}' " . ($row['status'] == 1 ? "checked" : "") . ">
-                            <span class='switch-state'></span>
-                        </label>
+                        <select class='form-select status-select' data-id='{$campaignId}'>
+                            <option value='active' " . ($statusVal === 'active' ? 'selected' : '') . ">Active</option>
+                            <option value='pending' " . ($statusVal === 'pending' ? 'selected' : '') . ">Pending</option>
+                            <option value='paused' " . ($statusVal === 'paused' ? 'selected' : '') . ">Paused</option>
+                        </select>
                     </td>
                     <td>
                         <ul class='action'>
@@ -226,17 +239,17 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 <script>
-document.querySelectorAll('.status-toggle').forEach(function(toggle) {
-    toggle.addEventListener('change', function() {
+document.querySelectorAll('.status-select').forEach(function(select) {
+    select.addEventListener('change', function() {
         const campaignId = this.dataset.id;
-        const newStatus = this.checked ? 1 : 0;
+        const newStatus = this.value;
 
         fetch('update-status.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: `id=${campaignId}&status=${newStatus}`
+            body: `id=${campaignId}&status=${encodeURIComponent(newStatus)}`
         })
         .then(res => res.text())
         .then(msg => {

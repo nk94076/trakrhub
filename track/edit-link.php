@@ -9,8 +9,13 @@ if (!$campaignId) {
     exit;
 }
 
-$stmt = $conn->prepare("SELECT * FROM campaigns WHERE id = ?");
-$stmt->bind_param("i", $campaignId);
+if (($_SESSION['role'] ?? '') === 'admin') {
+    $stmt = $conn->prepare("SELECT * FROM campaigns WHERE id = ?");
+    $stmt->bind_param("i", $campaignId);
+} else {
+    $stmt = $conn->prepare("SELECT * FROM campaigns WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $campaignId, $_SESSION['user_id']);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 $campaign = $result->fetch_assoc();
@@ -22,6 +27,7 @@ if (!$campaign) {
 }
 
 $blockedParams = explode(',', $campaign['blocked_params']);
+$selectedDevices = $campaign['devices'] === 'all' ? ['desktop', 'mobile', 'tablet'] : explode(',', $campaign['devices']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -73,7 +79,21 @@ $blockedParams = explode(',', $campaign['blocked_params']);
         <div class="mb-3 row">
           <label class="col-sm-3">Campaign Name</label>
           <div class="col-sm-9">
-            <input class="form-control" type="text" name="campaign_name" value="<?= htmlspecialchars($campaign['campaign_name']) ?>">
+            <input class="form-control" type="text" name="campaign_name" required value="<?= htmlspecialchars($campaign['campaign_name']) ?>">
+          </div>
+        </div>
+
+        <div class="mb-3 row">
+          <label class="col-sm-3">Description</label>
+          <div class="col-sm-9">
+            <textarea class="form-control" name="description" rows="2"><?= htmlspecialchars($campaign['description'] ?? '') ?></textarea>
+          </div>
+        </div>
+
+        <div class="mb-3 row">
+          <label class="col-sm-3">Category</label>
+          <div class="col-sm-9">
+            <input class="form-control" type="text" name="category" value="<?= htmlspecialchars($campaign['category'] ?? '') ?>">
           </div>
         </div>
 
@@ -106,6 +126,38 @@ $blockedParams = explode(',', $campaign['blocked_params']);
         </div>
 
         <div class="mb-3 row">
+          <label class="col-sm-3">Devices</label>
+          <div class="col-sm-9">
+            <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="devices[]" value="desktop" id="dev_desktop" <?= in_array('desktop', $selectedDevices) ? 'checked' : '' ?>><label class="form-check-label" for="dev_desktop">Desktop</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="devices[]" value="mobile" id="dev_mobile" <?= in_array('mobile', $selectedDevices) ? 'checked' : '' ?>><label class="form-check-label" for="dev_mobile">Mobile</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="devices[]" value="tablet" id="dev_tablet" <?= in_array('tablet', $selectedDevices) ? 'checked' : '' ?>><label class="form-check-label" for="dev_tablet">Tablet</label></div>
+            <div class="form-text">Traffic from unchecked devices will be sent to the Safe URL instead.</div>
+          </div>
+        </div>
+
+        <div class="mb-3 row">
+          <label class="col-sm-3">Operating System</label>
+          <div class="col-sm-9">
+            <select class="form-control" name="os">
+              <?php foreach (['all' => 'ALL', 'windows' => 'Windows', 'macos' => 'Mac OS', 'linux' => 'Linux', 'android' => 'Android', 'ios' => 'iOS (iPhone)'] as $val => $label): ?>
+                <option value="<?= $val ?>" <?= ($campaign['os'] ?? 'all') === $val ? 'selected' : '' ?>><?= $label ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-3 row">
+          <label class="col-sm-3">Redirect Type</label>
+          <div class="col-sm-9">
+            <select class="form-control" name="redirect_type">
+              <?php foreach (['302' => '302', '302_hrf' => '302 with Hide Referrer', '200' => '200 OK', '200_hrf' => '200 with Hide Referrer'] as $val => $label): ?>
+                <option value="<?= $val ?>" <?= ($campaign['redirect_type'] ?? '302') === $val ? 'selected' : '' ?>><?= $label ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-3 row">
           <label class="col-sm-3">Blocked Parameters</label>
           <div class="col-sm-9">
             <div class="form-check-size">
@@ -133,12 +185,33 @@ $blockedParams = explode(',', $campaign['blocked_params']);
         </div>
 
         <div class="mb-3 row">
+          <label class="col-sm-3">KPI</label>
+          <div class="col-sm-9">
+            <textarea class="form-control" name="kpi" rows="2"><?= htmlspecialchars($campaign['kpi'] ?? '') ?></textarea>
+          </div>
+        </div>
+
+        <div class="mb-3 row">
+          <label class="col-sm-3">Terms and Conditions</label>
+          <div class="col-sm-9">
+            <textarea class="form-control" name="terms_conditions" rows="2"><?= htmlspecialchars($campaign['terms_conditions'] ?? '') ?></textarea>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" name="require_tnc" value="1" id="requireTnc" <?= !empty($campaign['require_tnc']) ? 'checked' : '' ?>>
+              <label class="form-check-label" for="requireTnc">Require acceptance of terms and conditions</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3 row">
           <label class="col-sm-3">Status</label>
           <div class="col-sm-9">
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" name="status" id="statusSwitch" <?= $campaign['status'] == 1 ? 'checked' : '' ?>>
-              <label class="form-check-label" for="statusSwitch">Active</label>
-            </div>
+            <?php foreach (['active' => 'Active', 'pending' => 'Pending', 'paused' => 'Paused'] as $val => $label): ?>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="status" id="status_<?= $val ?>" value="<?= $val ?>" <?= $campaign['status'] === $val ? 'checked' : '' ?>>
+                <label class="form-check-label" for="status_<?= $val ?>"><?= $label ?></label>
+              </div>
+            <?php endforeach; ?>
+            <div class="form-text">Only Active campaigns redirect live traffic to the Main URL; Pending/Paused send visitors to the Safe URL.</div>
           </div>
         </div>
 

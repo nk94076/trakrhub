@@ -56,10 +56,26 @@ include '../required/config.php';
                             <div class="mb-3 row">
                               <label class="col-sm-3">Campaign Name</label>
                               <div class="col-sm-9">
-                                <input class="form-control" type="text" name="campaign_name" placeholder="Type your Campaign name (e.g. https://app.trakrhub.com)">
+                                <input class="form-control" type="text" name="campaign_name" required placeholder="Type your Campaign name (e.g. https://app.trakrhub.com)">
                               </div>
                             </div>
-                    
+
+                            <!-- Description -->
+                            <div class="mb-3 row">
+                              <label class="col-sm-3">Description</label>
+                              <div class="col-sm-9">
+                                <textarea class="form-control" name="description" rows="2" placeholder="Optional description of this campaign"></textarea>
+                              </div>
+                            </div>
+
+                            <!-- Category -->
+                            <div class="mb-3 row">
+                              <label class="col-sm-3">Category</label>
+                              <div class="col-sm-9">
+                                <input class="form-control" type="text" name="category" placeholder="e.g. E-commerce, Finance, Gaming">
+                              </div>
+                            </div>
+
                             <!-- Enter URL -->
                             <div class="mb-3 row">
                               <label class="col-sm-3">Enter URL</label>
@@ -93,8 +109,48 @@ include '../required/config.php';
                                   </div>
                                 </div>
 
-                            
-                            
+                                <!-- Devices -->
+                                <div class="mb-3 row">
+                                  <label class="col-sm-3">Devices</label>
+                                  <div class="col-sm-9">
+                                    <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="devices[]" value="desktop" id="dev_desktop" checked><label class="form-check-label" for="dev_desktop">Desktop</label></div>
+                                    <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="devices[]" value="mobile" id="dev_mobile" checked><label class="form-check-label" for="dev_mobile">Mobile</label></div>
+                                    <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="devices[]" value="tablet" id="dev_tablet" checked><label class="form-check-label" for="dev_tablet">Tablet</label></div>
+                                    <div class="form-text">Traffic from unchecked devices will be sent to the Safe URL instead.</div>
+                                  </div>
+                                </div>
+
+                                <!-- OS -->
+                                <div class="mb-3 row">
+                                  <label class="col-sm-3">Operating System</label>
+                                  <div class="col-sm-9">
+                                    <select class="form-control" name="os">
+                                      <option value="all" selected>ALL</option>
+                                      <option value="windows">Windows</option>
+                                      <option value="macos">Mac OS</option>
+                                      <option value="linux">Linux</option>
+                                      <option value="android">Android</option>
+                                      <option value="ios">iOS (iPhone)</option>
+                                    </select>
+                                  </div>
+                                </div>
+
+                                <!-- Redirect Type -->
+                                <div class="mb-3 row">
+                                  <label class="col-sm-3">Redirect Type</label>
+                                  <div class="col-sm-9">
+                                    <select class="form-control" name="redirect_type">
+                                      <option value="302" selected>302</option>
+                                      <option value="302_hrf">302 with Hide Referrer</option>
+                                      <option value="200">200 OK</option>
+                                      <option value="200_hrf">200 with Hide Referrer</option>
+                                    </select>
+                                    <div class="form-text">We recommend using 302 as the redirect type.</div>
+                                  </div>
+                                </div>
+
+
+
                              <!-- Enter URL -->
                             <div class="mb-3 row">
                               <label class="col-sm-3">Blocked Parameters</label>
@@ -214,18 +270,47 @@ include '../required/config.php';
                                 <textarea class="form-control" name="note" rows="4" placeholder="Optional notes or comments"></textarea>
                               </div>
                             </div>
-                    
+
+                            <!-- KPI -->
+                            <div class="mb-3 row">
+                              <label class="col-sm-3">KPI</label>
+                              <div class="col-sm-9">
+                                <textarea class="form-control" name="kpi" rows="2" placeholder="e.g. CR > 2.8%"></textarea>
+                              </div>
+                            </div>
+
+                            <!-- Terms and Conditions -->
+                            <div class="mb-3 row">
+                              <label class="col-sm-3">Terms and Conditions</label>
+                              <div class="col-sm-9">
+                                <textarea class="form-control" name="terms_conditions" rows="2" placeholder="Optional terms and conditions"></textarea>
+                                <div class="form-check mt-2">
+                                  <input class="form-check-input" type="checkbox" name="require_tnc" value="1" id="requireTnc">
+                                  <label class="form-check-label" for="requireTnc">Require acceptance of terms and conditions</label>
+                                </div>
+                              </div>
+                            </div>
+
                             <!-- Status -->
                             <div class="mb-3 row">
                               <label class="col-sm-3">Status</label>
                               <div class="col-sm-9">
-                                <div class="form-check form-switch">
-                                  <input class="form-check-input" type="checkbox" name="status" id="statusSwitch" checked>
-                                  <label class="form-check-label" for="statusSwitch">Active</label>
+                                <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="status" id="statusActive" value="active" checked>
+                                  <label class="form-check-label" for="statusActive">Active</label>
                                 </div>
+                                <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="status" id="statusPending" value="pending">
+                                  <label class="form-check-label" for="statusPending">Pending</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="status" id="statusPaused" value="paused">
+                                  <label class="form-check-label" for="statusPaused">Paused</label>
+                                </div>
+                                <div class="form-text">Only Active campaigns redirect live traffic to the Main URL; Pending/Paused send visitors to the Safe URL.</div>
                               </div>
                             </div>
-                    
+
                             <!-- Hidden user ID -->
                             <input type="hidden" name="user_id" value="<?= $_SESSION['user_id'] ?>">
                           </div>

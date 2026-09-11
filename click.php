@@ -26,8 +26,8 @@ if (!$campaign) {
     die("Invalid or expired tracking link.");
 }
 
-// If inactive, redirect to safe URL
-if ((int)$campaign['status'] === 0) {
+// Only active campaigns redirect live traffic; pending/paused go to the safe URL
+if (($campaign['status'] ?? 'paused') !== 'active') {
     header("Location: " . $campaign['safe_url']);
     exit;
 }
@@ -54,11 +54,13 @@ $timestamp  = date('Y-m-d H:i:s');
 
 function getOS($userAgent) {
     $osArray = [
+        // Android and iOS checked first: their user agents also contain
+        // "Linux"/"Mac OS X" respectively, which would otherwise shadow them.
+        '/android/i' => 'Android',
+        '/iphone|ipad|ipod/i' => 'iPhone',
         '/windows nt 10/i' => 'Windows 10',
         '/macintosh|mac os x/i' => 'Mac OS',
         '/linux/i' => 'Linux',
-        '/android/i' => 'Android',
-        '/iphone/i' => 'iPhone',
     ];
     foreach ($osArray as $regex => $value) {
         if (preg_match($regex, $userAgent)) return $value;
@@ -139,6 +141,20 @@ $logStmt->execute();
 $insertedId = $conn->insert_id; // ← CHANGE 1: log_id capture kiya
 $logStmt->close();
 
+// Device/OS targeting: mismatched traffic is logged above but sent to the safe URL
+$allowedDevices = ($campaign['devices'] ?? 'all') === 'all' ? null : explode(',', $campaign['devices']);
+if ($allowedDevices !== null && !in_array(strtolower($device), $allowedDevices, true)) {
+    header("Location: " . $campaign['safe_url']);
+    exit;
+}
+
+$osTargetMap = ['Windows 10' => 'windows', 'Mac OS' => 'macos', 'Linux' => 'linux', 'Android' => 'android', 'iPhone' => 'ios'];
+$allowedOs = $campaign['os'] ?? 'all';
+if ($allowedOs !== 'all' && ($osTargetMap[$os] ?? null) !== $allowedOs) {
+    header("Location: " . $campaign['safe_url']);
+    exit;
+}
+
 // ← CHANGE 2: landing page tracking ke liye adtrackr_lid append karo
 $finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . 'adtrackr_lid=' . $insertedId;
 
@@ -175,7 +191,18 @@ GT;
     echo "</script>";
     exit;
 } else {
-    header("Location: $finalUrl");
+    $redirectType = $campaign['redirect_type'] ?? '302';
+
+    if (in_array($redirectType, ['302_hrf', '200_hrf'], true)) {
+        header('Referrer-Policy: no-referrer');
+    }
+
+    if ($redirectType === '200' || $redirectType === '200_hrf') {
+        http_response_code(200);
+        echo "<script>window.location.href = " . json_encode($finalUrl) . ";</script>";
+    } else {
+        header("Location: $finalUrl", true, 302);
+    }
     exit;
 }
 ?>
