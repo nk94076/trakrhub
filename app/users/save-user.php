@@ -2,6 +2,11 @@
 require_once '../required/config.php';
 session_start();
 
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    http_response_code(403);
+    die('Access denied.');
+}
+
 // Get all form values
 $company   = $_POST['company'] ?? '';
 $username  = $_POST['username'] ?? '';

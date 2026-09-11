@@ -1,5 +1,11 @@
 <?php
 require_once '../required/config.php';
+session_start();
+
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    http_response_code(403);
+    die('Access denied.');
+}
 
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $user_id = $_GET['id'];

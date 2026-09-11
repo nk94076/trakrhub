@@ -3,6 +3,12 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 require_once '../required/config.php';
+session_start();
+
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    http_response_code(403);
+    die('Access denied.');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
     $id        = $_POST['id'];
@@ -22,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
         $stmt = $conn->prepare("UPDATE users SET company_name = ?, username = ?, email = ?, password = ?, phone = ?, address = ?, city = ?, postal_code = ?, role = ?, status = ?, about_me = ? WHERE id = ?");
-        $stmt->bind_param("ssssssssssssi", $company, $username, $email, $hashedPassword, $phone, $address, $city, $postal, $role, $status, $about, $id);
+        $stmt->bind_param("sssssssssisi", $company, $username, $email, $hashedPassword, $phone, $address, $city, $postal, $role, $status, $about, $id);
     } else {
         $stmt = $conn->prepare("UPDATE users SET company_name = ?, username = ?, email = ?, phone = ?, address = ?, city = ?, postal_code = ?, role = ?, status = ?, about_me = ? WHERE id = ?");
         $stmt->bind_param("ssssssssssi", $company, $username, $email, $phone, $address, $city, $postal, $role, $status, $about, $id);

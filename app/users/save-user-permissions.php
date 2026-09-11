@@ -2,7 +2,12 @@
 require_once '../required/config.php';
  require_once '../required/auth.php';
 
-$user_id = $_GET['user_id'] ?? 0;
+if (($_SESSION['role'] ?? '') !== 'admin') {
+    http_response_code(403);
+    die(json_encode(['status' => 'error', 'message' => 'Access denied.']));
+}
+
+$user_id = (int) ($_GET['user_id'] ?? 0);
 $data = json_decode(file_get_contents("php://input"), true);
 $permissions = $data['permissions'] ?? [];
 
