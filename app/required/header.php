@@ -1,7 +1,7 @@
 <?php
 // Include the database configuration
 include 'config.php';
-$base_url = 'https://app.trakrhub.com';
+$base_url = 'https://app.trakrhub.com/';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_email'])) {
