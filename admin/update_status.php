@@ -1,4 +1,5 @@
 <?php
+require_once '../required/auth.php';
 include '../required/config.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {

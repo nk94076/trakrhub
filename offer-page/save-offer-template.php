@@ -30,7 +30,14 @@ if (!is_dir($zip_dir)) mkdir($zip_dir, 0777, true);
 // Upload Image
 $image_path = '';
 if (isset($_FILES['template_image']) && $_FILES['template_image']['error'] === 0) {
-    $ext = pathinfo($_FILES['template_image']['name'], PATHINFO_EXTENSION);
+    $ext = strtolower(pathinfo($_FILES['template_image']['name'], PATHINFO_EXTENSION));
+    $allowedExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+    if (!in_array($ext, $allowedExt, true) || getimagesize($_FILES['template_image']['tmp_name']) === false) {
+        echo json_encode(['status' => 'error', 'message' => '❌ Invalid image file']);
+        exit;
+    }
+
     $image_name = uniqid('img_') . '.' . $ext;
     $image_target = $image_dir . $image_name;
 

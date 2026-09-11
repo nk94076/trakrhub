@@ -11,7 +11,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Handle image upload
     $image_path = "";
     if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
-        $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+        $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+        $allowedExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+        if (!in_array($ext, $allowedExt, true) || getimagesize($_FILES['image']['tmp_name']) === false) {
+            $_SESSION["error"] = "❌ Invalid image file.";
+            header("Location: manage-campaign.php");
+            exit();
+        }
+
         $filename = uniqid("offer_") . "." . $ext;
         $upload_dir = "../upload/images/";
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);

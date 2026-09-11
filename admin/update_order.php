@@ -1,4 +1,5 @@
 <?php
+require_once '../required/auth.php';
 include '../required/config.php';
 
 if (isset($_POST['order']) && is_array($_POST['order'])) {

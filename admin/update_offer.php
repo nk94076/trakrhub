@@ -1,4 +1,5 @@
 <?php
+require_once '../required/auth.php';
 include '../required/config.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -23,18 +24,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Image Handling
     if (!empty($_FILES["image"]["name"])) {
-        $original_name = basename($_FILES["image"]["name"]); // Original file name
-        $image_extension = pathinfo($original_name, PATHINFO_EXTENSION); // Get file extension
-        $target_path = "../image/" . $original_name; // Target file path
+        $image_extension = strtolower(pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION));
+        $allowedExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
-        // Check if file already exists, then rename
-        if (file_exists($target_path)) {
-            $random_number = rand(1000, 9999);
-            $new_name = pathinfo($original_name, PATHINFO_FILENAME) . "_$random_number.$image_extension";
-            $target_path = "../image/" . $new_name;
-        } else {
-            $new_name = $original_name;
+        if (!in_array($image_extension, $allowedExt, true) || getimagesize($_FILES["image"]["tmp_name"]) === false) {
+            echo "<script>alert('Invalid image file.'); window.history.back();</script>";
+            exit();
         }
+
+        $new_name = uniqid("offer_", true) . "." . $image_extension;
+        $target_path = "../image/" . $new_name;
 
         if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_path)) {
             // Delete old image if new one is uploaded
