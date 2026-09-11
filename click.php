@@ -23,8 +23,7 @@ $campaign = $result->fetch_assoc();
 $stmt->close();
 
 if (!$campaign) {
-    header("Location: https://adhook.adtrackr.org/error.html");
-    exit;
+    die("Invalid or expired tracking link.");
 }
 
 // If inactive, redirect to safe URL
