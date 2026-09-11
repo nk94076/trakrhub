@@ -38,13 +38,13 @@ $filteredParams = array_filter($_GET, function ($key) use ($blockedParams) {
     return !in_array($key, ['offer_id', 'aff_id']) && !in_array($key, $blockedParams);
 }, ARRAY_FILTER_USE_KEY);
 
-// Build redirect URL — a "custom" redirect type sends traffic to a
-// pre-lander/blog post about the offer instead of straight to the main URL.
-// It is used exactly as entered: no tracking params get appended, so it
-// stays a clean link to the custom page.
+// Build redirect URL — the visitor always lands on the Main URL. A "custom"
+// redirect type does NOT change where they go; it only overrides what gets
+// logged as the referral source (see $referrer below), e.g. to attribute
+// clicks to a specific blog post/pre-lander used to promote the offer.
 $isCustomRedirect = ($campaign['redirect_type'] ?? '302') === 'custom' && !empty($campaign['custom_url']);
-$finalUrl = $isCustomRedirect ? $campaign['custom_url'] : $campaign['main_url'];
-if (!$isCustomRedirect && !empty($filteredParams)) {
+$finalUrl = $campaign['main_url'];
+if (!empty($filteredParams)) {
     $queryString = http_build_query($filteredParams);
     $finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . $queryString;
 }
@@ -52,9 +52,9 @@ if (!$isCustomRedirect && !empty($filteredParams)) {
 // Capture environment data
 $ip         = $_SERVER['REMOTE_ADDR'] ?? '';
 $userAgent  = $_SERVER['HTTP_USER_AGENT'] ?? '';
-// For a "custom" redirect, the report's Referrer column should show the
-// custom pre-lander URL the click was attributed to, not the raw browser
-// Referer header (which is usually empty on a fresh ad click anyway).
+// For a "custom" redirect, the report's Referrer column shows the custom
+// URL the click is attributed to, not the raw browser Referer header
+// (which is usually empty on a fresh ad click anyway).
 $referrer   = $isCustomRedirect ? $campaign['custom_url'] : ($_SERVER['HTTP_REFERER'] ?? '');
 $language   = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '';
 $timestamp  = date('Y-m-d H:i:s');
@@ -163,10 +163,7 @@ if ($allowedOs !== 'all' && ($osTargetMap[$os] ?? null) !== $allowedOs) {
 }
 
 // ← CHANGE 2: landing page tracking ke liye adtrackr_lid append karo
-// (skipped for a "custom" redirect — that URL is used exactly as entered)
-if (!$isCustomRedirect) {
-    $finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . 'adtrackr_lid=' . $insertedId;
-}
+$finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . 'adtrackr_lid=' . $insertedId;
 
 $has_pixel = !empty($campaign['facebook_pixel']) || !empty($campaign['google_pixel']);
 

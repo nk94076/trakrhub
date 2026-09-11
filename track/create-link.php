@@ -144,7 +144,7 @@ include '../required/config.php';
                                       <option value="302_hrf">302 with Hide Referrer</option>
                                       <option value="200">200 OK</option>
                                       <option value="200_hrf">200 with Hide Referrer</option>
-                                      <option value="custom">Custom (Pre-lander / Blog Post)</option>
+                                      <option value="custom">Custom (Set Referral Source)</option>
                                     </select>
                                     <div class="form-text">We recommend using 302 as the redirect type.</div>
                                   </div>
@@ -155,7 +155,7 @@ include '../required/config.php';
                                   <label class="col-sm-3">Custom URL</label>
                                   <div class="col-sm-9">
                                     <input class="form-control" type="url" name="custom_url" placeholder="https://yourblog.com/offer-review-post">
-                                    <div class="form-text">Traffic will land on this page first (e.g. a blog post/pre-lander about the offer) instead of going straight to the Main URL — its referral is used from there.</div>
+                                    <div class="form-text">Visitors still go to the Main URL. This is only used as the referral source shown in reports (e.g. a blog post/pre-lander you promoted the offer on).</div>
                                   </div>
                                 </div>
 
