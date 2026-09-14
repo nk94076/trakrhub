@@ -28,9 +28,11 @@ if (!$campaign) {
 
 // Google Ads Tracking Template support: Google's Transparent Click Tracker
 // guidelines require the next redirect hop to be passed as a visible query
-// parameter (e.g. via the {lpurl} ValueTrack macro) rather than resolved from
-// a hidden backend lookup. When present and a well-formed URL, it overrides
-// the campaign's stored Main URL for this click only.
+// parameter rather than resolved purely from a hidden backend lookup. The
+// generated Tracking Template (see view-link.php) bakes in the campaign's own
+// Main/Affiliate URL as this parameter's value, so the visitor always lands
+// on the same place a plain tracking link would; Google's own Final URL
+// ({lpurl}) travels separately as google_lpurl, for reference/logging only.
 $redirectionUrl = isset($_GET['redirection_url']) ? trim($_GET['redirection_url']) : '';
 $hasValidRedirectionUrl = $redirectionUrl !== '' && filter_var($redirectionUrl, FILTER_VALIDATE_URL) !== false;
 
@@ -50,7 +52,7 @@ if (($campaign['status'] ?? 'paused') !== 'active' && !$isGoogleAdsClick) {
 // Handle blocked parameters
 $blockedParams = array_filter(array_map('trim', explode(',', $campaign['blocked_params'] ?? '')));
 $filteredParams = array_filter($_GET, function ($key) use ($blockedParams) {
-    return !in_array($key, ['offer_id', 'aff_id', 'redirection_url']) && !in_array($key, $blockedParams);
+    return !in_array($key, ['offer_id', 'aff_id', 'redirection_url', 'force_transparent', 'google_lpurl']) && !in_array($key, $blockedParams);
 }, ARRAY_FILTER_USE_KEY);
 
 // Build redirect URL — the visitor always lands on the Main URL (or the

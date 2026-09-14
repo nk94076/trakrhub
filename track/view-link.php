@@ -42,11 +42,18 @@ $badgeClass = $statusBadge[$campaign['status']] ?? 'secondary';
 
 $trackingLink = "https://app.trakrhub.com/click.php?aff_id=" . (int) $campaign['user_id'] . "&offer_id=" . (int) $campaign['id'];
 
-// Google Ads Tracking Template: uses the {lpurl} ValueTrack macro so the
-// Final URL configured in Google Ads is passed through as a visible query
-// parameter, per Google's Transparent Click Tracker guidelines (the click
-// still logs to this campaign via offer_id/aff_id as usual).
-$googleTrackingTemplate = "https://app.trakrhub.com/click.php?offer_id=" . (int) $campaign['id'] . "&aff_id=" . (int) $campaign['user_id'] . "&redirection_url={lpurl}";
+// Google Ads Tracking Template: bakes in this campaign's own Main/Affiliate
+// URL as the visible "redirection_url" transparency parameter, so the
+// visitor always lands there — same as a plain tracking link — while Google
+// Ads' own Final URL and Click ID travel alongside purely for reference
+// (google_lpurl, gclid), matching Google's Transparent Click Tracker
+// guidelines without changing where clicks actually go.
+$googleTrackingTemplate = "https://app.trakrhub.com/click.php?offer_id=" . (int) $campaign['id']
+    . "&aff_id=" . (int) $campaign['user_id']
+    . "&force_transparent=true"
+    . "&redirection_url=" . urlencode($campaign['main_url'])
+    . "&gclid={gclid}"
+    . "&google_lpurl={lpurl}";
 
 $deviceLabels = $campaign['devices'] === 'all' ? 'All Devices' : implode(', ', array_map('ucfirst', explode(',', $campaign['devices'])));
 $osLabels = $campaign['os'] === 'all' ? 'All OS' : $campaign['os'];
@@ -252,7 +259,7 @@ $redirectLabels = [
                                         <input type="text" class="form-control" id="googleTemplateInput" value="<?= htmlspecialchars($googleTrackingTemplate) ?>" readonly>
                                         <button class="btn btn-outline-secondary" type="button" id="copyTemplateBtn"><i class="fa-solid fa-copy me-1"></i>Copy</button>
                                     </div>
-                                    <div class="form-text">Keep your ad's own Final URL set to the real landing page. Google replaces <code>{lpurl}</code> with that Final URL (URL-encoded) on every click, so this tracker sees it as a visible parameter — the format Google's Transparent Click Tracker Certification requires — logs the click, then redirects the visitor there.</div>
+                                    <div class="form-text">The visitor always lands on this campaign's own Main/Affiliate URL (already baked into <code>redirection_url</code> above, visible as required by Google's Transparent Click Tracker guidelines). Google replaces <code>{gclid}</code> and <code>{lpurl}</code> with the real Click ID and Final URL on every click — these travel alongside for reference/attribution only and don't change where the visitor goes. If you change the Main URL later, re-copy this template.</div>
                                 </div>
                             </div>
 
