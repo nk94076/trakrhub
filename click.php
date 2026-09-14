@@ -35,15 +35,24 @@ if (($campaign['status'] ?? 'paused') !== 'active') {
 // Handle blocked parameters
 $blockedParams = array_filter(array_map('trim', explode(',', $campaign['blocked_params'] ?? '')));
 $filteredParams = array_filter($_GET, function ($key) use ($blockedParams) {
-    return !in_array($key, ['offer_id', 'aff_id']) && !in_array($key, $blockedParams);
+    return !in_array($key, ['offer_id', 'aff_id', 'redirection_url']) && !in_array($key, $blockedParams);
 }, ARRAY_FILTER_USE_KEY);
 
-// Build redirect URL — the visitor always lands on the Main URL. A "custom"
-// redirect type does NOT change where they go; it only overrides what gets
-// logged as the referral source (see $referrer below), e.g. to attribute
-// clicks to a specific blog post/pre-lander used to promote the offer.
+// Google Ads Tracking Template support: Google's Transparent Click Tracker
+// guidelines require the next redirect hop to be passed as a visible query
+// parameter (e.g. via the {lpurl} ValueTrack macro) rather than resolved from
+// a hidden backend lookup. When present and a well-formed URL, it overrides
+// the campaign's stored Main URL for this click only.
+$redirectionUrl = isset($_GET['redirection_url']) ? trim($_GET['redirection_url']) : '';
+$hasValidRedirectionUrl = $redirectionUrl !== '' && filter_var($redirectionUrl, FILTER_VALIDATE_URL) !== false;
+
+// Build redirect URL — the visitor always lands on the Main URL (or the
+// redirection_url override above, when present). A "custom" redirect type
+// does NOT change where they go; it only overrides what gets logged as the
+// referral source (see $referrer below), e.g. to attribute clicks to a
+// specific blog post/pre-lander used to promote the offer.
 $isCustomRedirect = ($campaign['redirect_type'] ?? '302') === 'custom' && !empty($campaign['custom_url']);
-$finalUrl = $campaign['main_url'];
+$finalUrl = $hasValidRedirectionUrl ? $redirectionUrl : $campaign['main_url'];
 if (!empty($filteredParams)) {
     $queryString = http_build_query($filteredParams);
     $finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . $queryString;

@@ -42,6 +42,12 @@ $badgeClass = $statusBadge[$campaign['status']] ?? 'secondary';
 
 $trackingLink = "https://app.trakrhub.com/click.php?aff_id=" . (int) $campaign['user_id'] . "&offer_id=" . (int) $campaign['id'];
 
+// Google Ads Tracking Template: uses the {lpurl} ValueTrack macro so the
+// Final URL configured in Google Ads is passed through as a visible query
+// parameter, per Google's Transparent Click Tracker guidelines (the click
+// still logs to this campaign via offer_id/aff_id as usual).
+$googleTrackingTemplate = "https://app.trakrhub.com/click.php?offer_id=" . (int) $campaign['id'] . "&aff_id=" . (int) $campaign['user_id'] . "&redirection_url={lpurl}";
+
 $deviceLabels = $campaign['devices'] === 'all' ? 'All Devices' : implode(', ', array_map('ucfirst', explode(',', $campaign['devices'])));
 $osLabels = $campaign['os'] === 'all' ? 'All OS' : $campaign['os'];
 $redirectLabels = [
@@ -238,6 +244,20 @@ $redirectLabels = [
 
                             <div class="card">
                                 <div class="card-header">
+                                    <h5>Google Ads Tracking Template</h5>
+                                </div>
+                                <div class="card-body">
+                                    <label class="form-label">Paste into Google Ads &rarr; Campaign Settings &rarr; Tracking Template</label>
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control" id="googleTemplateInput" value="<?= htmlspecialchars($googleTrackingTemplate) ?>" readonly>
+                                        <button class="btn btn-outline-secondary" type="button" id="copyTemplateBtn"><i class="fa-solid fa-copy me-1"></i>Copy</button>
+                                    </div>
+                                    <div class="form-text">Keep your ad's own Final URL set to the real landing page. Google replaces <code>{lpurl}</code> with that Final URL (URL-encoded) on every click, so this tracker sees it as a visible parameter — the format Google's Transparent Click Tracker Certification requires — logs the click, then redirects the visitor there.</div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
                                     <h5>Blocked Parameters</h5>
                                 </div>
                                 <div class="card-body">
@@ -272,17 +292,21 @@ $redirectLabels = [
     </div>
     <?php include '../required/footerjs.php'; ?>
     <script>
-document.getElementById('copyLinkBtn').addEventListener('click', function () {
-    const input = document.getElementById('trackingLinkInput');
-    input.select();
-    input.setSelectionRange(0, 99999);
-    navigator.clipboard.writeText(input.value).then(() => {
-        const btn = document.getElementById('copyLinkBtn');
-        const original = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Copied';
-        setTimeout(() => { btn.innerHTML = original; }, 1500);
+function wireCopyButton(inputId, btnId) {
+    document.getElementById(btnId).addEventListener('click', function () {
+        const input = document.getElementById(inputId);
+        input.select();
+        input.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(input.value).then(() => {
+            const btn = document.getElementById(btnId);
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Copied';
+            setTimeout(() => { btn.innerHTML = original; }, 1500);
+        });
     });
-});
+}
+wireCopyButton('trackingLinkInput', 'copyLinkBtn');
+wireCopyButton('googleTemplateInput', 'copyTemplateBtn');
     </script>
 </body>
 </html>
