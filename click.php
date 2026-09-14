@@ -26,8 +26,23 @@ if (!$campaign) {
     die("Invalid or expired tracking link.");
 }
 
+// Google Ads Tracking Template support: Google's Transparent Click Tracker
+// guidelines require the next redirect hop to be passed as a visible query
+// parameter (e.g. via the {lpurl} ValueTrack macro) rather than resolved from
+// a hidden backend lookup. When present and a well-formed URL, it overrides
+// the campaign's stored Main URL for this click only.
+$redirectionUrl = isset($_GET['redirection_url']) ? trim($_GET['redirection_url']) : '';
+$hasValidRedirectionUrl = $redirectionUrl !== '' && filter_var($redirectionUrl, FILTER_VALIDATE_URL) !== false;
+
+// A Tracking-Template click must always land on the same domain as the
+// advertiser's Final URL, or Google Ads flags it as a "Destination mismatch"
+// and disapproves the ad. So Status/Device/OS targeting below is skipped for
+// these clicks — they still get logged normally either way — and only
+// applies to trakrhub's own plain tracking links (no redirection_url).
+$isGoogleAdsClick = $hasValidRedirectionUrl;
+
 // Only active campaigns redirect live traffic; pending/paused go to the safe URL
-if (($campaign['status'] ?? 'paused') !== 'active') {
+if (($campaign['status'] ?? 'paused') !== 'active' && !$isGoogleAdsClick) {
     header("Location: " . $campaign['safe_url']);
     exit;
 }
@@ -37,14 +52,6 @@ $blockedParams = array_filter(array_map('trim', explode(',', $campaign['blocked_
 $filteredParams = array_filter($_GET, function ($key) use ($blockedParams) {
     return !in_array($key, ['offer_id', 'aff_id', 'redirection_url']) && !in_array($key, $blockedParams);
 }, ARRAY_FILTER_USE_KEY);
-
-// Google Ads Tracking Template support: Google's Transparent Click Tracker
-// guidelines require the next redirect hop to be passed as a visible query
-// parameter (e.g. via the {lpurl} ValueTrack macro) rather than resolved from
-// a hidden backend lookup. When present and a well-formed URL, it overrides
-// the campaign's stored Main URL for this click only.
-$redirectionUrl = isset($_GET['redirection_url']) ? trim($_GET['redirection_url']) : '';
-$hasValidRedirectionUrl = $redirectionUrl !== '' && filter_var($redirectionUrl, FILTER_VALIDATE_URL) !== false;
 
 // Build redirect URL — the visitor always lands on the Main URL (or the
 // redirection_url override above, when present). A "custom" redirect type
@@ -157,16 +164,17 @@ $logStmt->execute();
 $insertedId = $conn->insert_id; // ← CHANGE 1: log_id capture kiya
 $logStmt->close();
 
-// Device/OS targeting: mismatched traffic is logged above but sent to the safe URL
+// Device/OS targeting: mismatched traffic is logged above but sent to the safe
+// URL — skipped for Google Ads Tracking Template clicks (see $isGoogleAdsClick).
 $allowedDevices = ($campaign['devices'] ?? 'all') === 'all' ? null : explode(',', $campaign['devices']);
-if ($allowedDevices !== null && !in_array(strtolower($device), $allowedDevices, true)) {
+if ($allowedDevices !== null && !in_array(strtolower($device), $allowedDevices, true) && !$isGoogleAdsClick) {
     header("Location: " . $campaign['safe_url']);
     exit;
 }
 
 $osTargetMap = ['Windows 10' => 'windows', 'Mac OS' => 'macos', 'Linux' => 'linux', 'Android' => 'android', 'iPhone' => 'ios'];
 $allowedOs = $campaign['os'] ?? 'all';
-if ($allowedOs !== 'all' && ($osTargetMap[$os] ?? null) !== $allowedOs) {
+if ($allowedOs !== 'all' && ($osTargetMap[$os] ?? null) !== $allowedOs && !$isGoogleAdsClick) {
     header("Location: " . $campaign['safe_url']);
     exit;
 }
