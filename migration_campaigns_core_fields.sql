@@ -7,6 +7,9 @@
 -- "custom_url" column existed) and everything else is already in place,
 -- just run this one line instead of the whole script:
 --   ALTER TABLE campaigns ADD COLUMN custom_url TEXT NULL AFTER redirect_type;
+--
+-- If you already have custom_url too (before "gclid_param" existed), just run:
+--   ALTER TABLE campaigns ADD COLUMN gclid_param VARCHAR(50) NULL AFTER custom_url;
 
 ALTER TABLE campaigns
   ADD COLUMN description TEXT NULL AFTER campaign_name,
@@ -18,6 +21,7 @@ ALTER TABLE campaigns
   ADD COLUMN os VARCHAR(100) NOT NULL DEFAULT 'all' AFTER devices,
   ADD COLUMN redirect_type VARCHAR(20) NOT NULL DEFAULT '302' AFTER os,
   ADD COLUMN custom_url TEXT NULL AFTER redirect_type,
+  ADD COLUMN gclid_param VARCHAR(50) NULL AFTER custom_url,
   ADD COLUMN campaign_status ENUM('active','pending','paused') NOT NULL DEFAULT 'pending' AFTER status;
 
 -- Convert the old status (1 = active, 0 = inactive) into the new 3-state column

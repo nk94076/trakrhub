@@ -45,13 +45,23 @@ $trackingLink = "https://app.trakrhub.com/click.php?aff_id=" . (int) $campaign['
 // Google Ads Tracking Template: bakes in this campaign's own Main/Affiliate
 // URL as the visible "redirection_url" transparency parameter, so the
 // visitor always lands there — same as a plain tracking link — while Google
-// Ads' own Final URL and Click ID travel alongside purely for reference
-// (google_lpurl, gclid), matching Google's Transparent Click Tracker
-// guidelines without changing where clicks actually go.
+// Ads' own Final URL travels alongside purely for reference (google_lpurl),
+// matching Google's Transparent Click Tracker guidelines without changing
+// where clicks actually go. When the campaign has an Affiliate Click-ID
+// Parameter set (e.g. Impact Radius' subId1), Google's {gclid} macro is
+// embedded directly into the Main URL itself so the affiliate network's own
+// attribution picks it up, in addition to trakrhub's own gclid capture.
+$destinationForTemplate = $campaign['main_url'];
+if (!empty($campaign['gclid_param'])) {
+    $sep = parse_url($destinationForTemplate, PHP_URL_QUERY) ? '&' : '?';
+    $destinationForTemplate = urlencode($destinationForTemplate . $sep . $campaign['gclid_param'] . '=') . '{gclid}';
+} else {
+    $destinationForTemplate = urlencode($destinationForTemplate);
+}
 $googleTrackingTemplate = "https://app.trakrhub.com/click.php?offer_id=" . (int) $campaign['id']
     . "&aff_id=" . (int) $campaign['user_id']
     . "&force_transparent=true"
-    . "&redirection_url=" . urlencode($campaign['main_url'])
+    . "&redirection_url=" . $destinationForTemplate
     . "&gclid={gclid}"
     . "&google_lpurl={lpurl}";
 
@@ -259,7 +269,10 @@ $redirectLabels = [
                                         <input type="text" class="form-control" id="googleTemplateInput" value="<?= htmlspecialchars($googleTrackingTemplate) ?>" readonly>
                                         <button class="btn btn-outline-secondary" type="button" id="copyTemplateBtn"><i class="fa-solid fa-copy me-1"></i>Copy</button>
                                     </div>
-                                    <div class="form-text">The visitor always lands on this campaign's own Main/Affiliate URL (already baked into <code>redirection_url</code> above, visible as required by Google's Transparent Click Tracker guidelines). Google replaces <code>{gclid}</code> and <code>{lpurl}</code> with the real Click ID and Final URL on every click — these travel alongside for reference/attribution only and don't change where the visitor goes. If you change the Main URL later, re-copy this template.</div>
+                                    <div class="form-text">
+                                        The visitor always lands on this campaign's own Main/Affiliate URL (already baked into <code>redirection_url</code> above<?= !empty($campaign['gclid_param']) ? ", with <code>" . htmlspecialchars($campaign['gclid_param']) . "={gclid}</code> embedded in it for your affiliate network's attribution" : '' ?>). Google replaces <code>{gclid}</code> and <code>{lpurl}</code> with the real Click ID and Final URL on every click — these travel alongside for reference/attribution only and don't change where the visitor goes. If you change the Main URL later, re-copy this template.
+                                        <br><strong>Setup requirement:</strong> in Google Ads, set this ad's <strong>Final URL</strong> to the domain your Main/Affiliate URL actually redirects to (e.g. the advertiser's real site), not the affiliate link's own domain — otherwise Google Ads may reject the ad as a "Destination mismatch".
+                                    </div>
                                 </div>
                             </div>
 

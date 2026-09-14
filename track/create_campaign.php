@@ -21,6 +21,7 @@ $terms_conditions  = clean($conn, $_POST['terms_conditions'] ?? '');
 $require_tnc       = isset($_POST['require_tnc']) ? 1 : 0;
 $redirect_type     = in_array($_POST['redirect_type'] ?? '', ['302', '302_hrf', '200', '200_hrf', 'custom'], true) ? $_POST['redirect_type'] : '302';
 $custom_url        = clean($conn, $_POST['custom_url'] ?? '');
+$gclid_param       = clean($conn, $_POST['gclid_param'] ?? '');
 $os                = in_array($_POST['os'] ?? '', ['all', 'windows', 'macos', 'linux', 'android', 'ios'], true) ? $_POST['os'] : 'all';
 $allowedDevices    = ['desktop', 'mobile', 'tablet'];
 $selectedDevices   = array_values(array_intersect($_POST['devices'] ?? [], $allowedDevices));
@@ -46,12 +47,12 @@ if (empty($campaign_name) || empty($main_url) || $user_id == 0) {
 
 // Insert into database
 $stmt = $conn->prepare("INSERT INTO campaigns
-    (user_id, campaign_name, description, main_url, safe_url, google_pixel, facebook_pixel, blocked_params, note, category, kpi, terms_conditions, require_tnc, devices, os, redirect_type, custom_url, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    (user_id, campaign_name, description, main_url, safe_url, google_pixel, facebook_pixel, blocked_params, note, category, kpi, terms_conditions, require_tnc, devices, os, redirect_type, custom_url, gclid_param, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 $stmt->bind_param(
-    "isssssssssssssssss",
+    "issssssssssssssssss",
     $user_id, $campaign_name, $description, $main_url, $safe_url, $google_pixel, $facebook_pixel, $blocked_params, $note,
-    $category, $kpi, $terms_conditions, $require_tnc, $devices, $os, $redirect_type, $custom_url, $status
+    $category, $kpi, $terms_conditions, $require_tnc, $devices, $os, $redirect_type, $custom_url, $gclid_param, $status
 );
 
 if ($stmt->execute()) {

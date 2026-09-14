@@ -159,6 +159,15 @@ include '../required/config.php';
                                   </div>
                                 </div>
 
+                                <!-- Affiliate Click-ID Parameter -->
+                                <div class="mb-3 row">
+                                  <label class="col-sm-3">Affiliate Click-ID Parameter</label>
+                                  <div class="col-sm-9">
+                                    <input class="form-control" type="text" name="gclid_param" placeholder="e.g. subId1">
+                                    <div class="form-text">Optional. If your affiliate network needs Google's Click ID for attribution, enter its parameter name here (Impact Radius: <code>subId1</code>, Awin: <code>clickref</code>, CJ: <code>sid</code>). The Google Ads Tracking Template on this campaign's page will then embed it directly into the Main URL. Leave blank if not needed.</div>
+                                  </div>
+                                </div>
+
 
 
                              <!-- Enter URL -->
