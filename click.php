@@ -135,7 +135,14 @@ function safeParam($key, $blockedParams) {
     return in_array($key, $blockedParams) ? '' : ($_GET[$key] ?? '');
 }
 
-$gclid         = safeParam('gclid', $blockedParams);
+// Some privacy-focused browsers strip well-known tracking parameters like
+// "gclid" from URLs on navigation. The Google Ads Tracking Template (see
+// view-link.php) uses the less recognizable "sub1" name for this same value,
+// falling back to "gclid" for older already-deployed templates.
+$gclid = safeParam('sub1', $blockedParams);
+if ($gclid === '') {
+    $gclid = safeParam('gclid', $blockedParams);
+}
 $fbclid        = safeParam('fbclid', $blockedParams);
 $utm_source    = safeParam('utm_source', $blockedParams);
 $utm_medium    = safeParam('utm_medium', $blockedParams);

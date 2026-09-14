@@ -50,7 +50,9 @@ $trackingLink = "https://app.trakrhub.com/click.php?aff_id=" . (int) $campaign['
 // where clicks actually go. When the campaign has an Affiliate Click-ID
 // Parameter set (e.g. Impact Radius' subId1), Google's {gclid} macro is
 // embedded directly into the Main URL itself so the affiliate network's own
-// attribution picks it up, in addition to trakrhub's own gclid capture.
+// attribution picks it up. It's also passed as "sub1" (not "gclid") for
+// trakrhub's own capture, since some privacy-focused browsers strip
+// well-known tracking parameter names like "gclid" from URLs on navigation.
 $destinationForTemplate = $campaign['main_url'];
 if (!empty($campaign['gclid_param'])) {
     $sep = parse_url($destinationForTemplate, PHP_URL_QUERY) ? '&' : '?';
@@ -61,8 +63,8 @@ if (!empty($campaign['gclid_param'])) {
 $googleTrackingTemplate = "https://app.trakrhub.com/click.php?offer_id=" . (int) $campaign['id']
     . "&aff_id=" . (int) $campaign['user_id']
     . "&force_transparent=true"
+    . "&sub1={gclid}"
     . "&redirection_url=" . $destinationForTemplate
-    . "&gclid={gclid}"
     . "&google_lpurl={lpurl}";
 
 $deviceLabels = $campaign['devices'] === 'all' ? 'All Devices' : implode(', ', array_map('ucfirst', explode(',', $campaign['devices'])));
