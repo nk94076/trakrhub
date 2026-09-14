@@ -52,7 +52,10 @@ if (($campaign['status'] ?? 'paused') !== 'active' && !$isGoogleAdsClick) {
 // Handle blocked parameters
 $blockedParams = array_filter(array_map('trim', explode(',', $campaign['blocked_params'] ?? '')));
 $filteredParams = array_filter($_GET, function ($key) use ($blockedParams) {
-    return !in_array($key, ['offer_id', 'aff_id', 'redirection_url', 'force_transparent', 'google_lpurl']) && !in_array($key, $blockedParams);
+    // click_id is excluded here too: it's still captured into click_logs from
+    // the incoming request below, but the outgoing URL gets trakrhub's own
+    // click_id (this click's log row ID) instead, so the two never collide.
+    return !in_array($key, ['offer_id', 'aff_id', 'redirection_url', 'force_transparent', 'google_lpurl', 'click_id']) && !in_array($key, $blockedParams);
 }, ARRAY_FILTER_USE_KEY);
 
 // Build redirect URL — the visitor always lands on the Main URL (or the
@@ -188,8 +191,9 @@ if ($allowedOs !== 'all' && ($osTargetMap[$os] ?? null) !== $allowedOs && !$isGo
     exit;
 }
 
-// ← CHANGE 2: landing page tracking ke liye adtrackr_lid append karo
-$finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . 'adtrackr_lid=' . $insertedId;
+// Append trakrhub's own click_id (this click's click_logs row ID) for any
+// landing-page-side conversion tracking/postback integration.
+$finalUrl .= (parse_url($finalUrl, PHP_URL_QUERY) ? '&' : '?') . 'click_id=' . $insertedId;
 
 $has_pixel = !empty($campaign['facebook_pixel']) || !empty($campaign['google_pixel']);
 
